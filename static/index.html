@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Master - Login & Quiz</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --error: #ef4444;
+            --success: #22c55e;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+
+        .user-nav {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            display: none;
+            align-items: center;
+            background: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            cursor: pointer;
+            user-select: none;
+            z-index: 1000;
+            border: 1px solid #e2e8f0;
+        }
+
+        .user-nav.visible { display: flex; }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .profile-icon { 
+            width: auto; height: 32px; background: var(--primary); 
+            color: white; border-radius: 1rem; display: flex; 
+            align-items: center; justify-content: center; font-weight: 600;
+            font-size: 0.85rem; padding: 0 1rem;
+        }
+
+        #display-name { display: none; } /* Hide the separate span, use the pill instead */
+
+        .logout-menu {
+            position: absolute;
+            top: 110%;
+            right: 0;
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            display: none;
+            overflow: hidden;
+            min-width: 120px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .logout-menu.show { display: block; }
+
+        .logout-btn {
+            width: 100%;
+            background: none; border: none; 
+            padding: 0.75rem 1rem;
+            cursor: pointer; font-size: 0.85rem;
+            text-align: left;
+            color: var(--error);
+            font-weight: 600;
+        }
+        .logout-btn:hover { background: #fee2e2; }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 1.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+        }
+
+        h1 { font-size: 1.75rem; margin-bottom: 0.5rem; color: var(--primary); text-align: center; }
+        p { color: var(--text-light); margin-bottom: 1.5rem; text-align: center; }
+
+        .tabs { display: flex; margin-bottom: 1.5rem; border-bottom: 1px solid #e2e8f0; }
+        .tab { 
+            flex: 1; text-align: center; padding: 0.75rem; cursor: pointer; 
+            font-weight: 600; color: var(--text-light); 
+        }
+        .tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.35rem; font-weight: 600; font-size: 0.9rem; }
+        input {
+            width: 100%; padding: 0.65rem; border-radius: 0.5rem; border: 1px solid #e2e8f0;
+            box-sizing: border-box; font-family: inherit;
+        }
+
+        .btn {
+            width: 100%; background-color: var(--primary); color: white; padding: 0.75rem;
+            border-radius: 0.5rem; border: none; font-weight: 600; cursor: pointer;
+            transition: background 0.2s; margin-top: 0.5rem;
+        }
+        .btn:hover { background-color: var(--primary-hover); }
+
+        .msg { font-size: 0.85rem; margin-top: 1rem; text-align: center; }
+        .error { color: var(--error); }
+        .success { color: var(--success); }
+
+        #quiz-container, #auth-screen, #leaderboard-screen, #settings-screen { display: none; }
+        .visible-screen { display: block !important; }
+
+        .question { font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; background: #f1f5f9; padding: 1rem; border-radius: 0.5rem; }
+        .option {
+            display: block; background: #f8fafc; padding: 0.85rem; margin-bottom: 0.5rem;
+            border-radius: 0.5rem; cursor: pointer; border: 1px solid #e2e8f0; transition: all 0.2s;
+        }
+        .option:hover { background: #f1f5f9; }
+        .option.selected { border-color: var(--primary); background: #e0e7ff; }
+
+        .score-box { font-size: 2rem; font-weight: 800; color: var(--primary); margin: 1.5rem 0; text-align: center; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body>
+    <div class="user-nav" id="user-nav" onclick="toggleLogoutMenu()">
+        <div class="user-info">
+            <div class="profile-icon" id="user-initial">U</div>
+            <span id="display-name">User</span>
+        </div>
+        <div class="logout-menu" id="logout-menu">
+            <button class="logout-btn" onclick="logout(event)">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Auth Screen -->
+        <div id="auth-screen" class="card">
+            <h1>Quiz Master</h1>
+            <p>Sign in to start your quiz</p>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('login')">Login</div>
+                <div class="tab" onclick="switchTab('register')">Register</div>
+            </div>
+
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="username" placeholder="Enter username">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="Enter password">
+            </div>
+            
+            <button class="btn" id="auth-btn" onclick="handleAuth()">Login</button>
+            <div id="auth-msg" class="msg"></div>
+        </div>
+
+        <!-- Quiz Settings Screen -->
+        <div id="settings-screen" class="card">
+            <h1>Quiz Settings</h1>
+            <p>Ready to test your knowledge?</p>
+            
+            <div class="form-group">
+                <label>Number of Questions</label>
+                <select id="quiz-limit" style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; font-family: inherit; margin-bottom: 1rem;">
+                    <option value="10">10 Questions</option>
+                    <option value="30">30 Questions</option>
+                    <option value="50">50 Questions</option>
+                    <option value="100">100 Questions</option>
+                </select>
+                
+                <label>Select Language</label>
+                <select id="quiz-lang" style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; font-family: inherit;">
+                    <option value="en">English</option>
+                    <option value="hi">Hindi (हिंदी)</option>
+                    <option value="mr">Marathi (मराठी)</option>
+                </select>
+            </div>
+            
+            <button class="btn" onclick="startQuiz()">Start Quiz Now</button>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quiz-container" class="card">
+            <h1>Quiz Time!</h1>
+            <p id="q-progress">Question 1</p>
+            <div class="question" id="q-text">Loading...</div>
+            <div id="q-options"></div>
+            <button class="btn" id="next-btn" onclick="nextQuestion()">Next Question</button>
+        </div>
+
+        <div id="leaderboard-screen" class="card">
+            <h1>Results</h1>
+            <div class="score-box" id="user-score">0</div>
+            <p id="result-text">Well done!</p>
+            
+            <h3>Global Leaderboard</h3>
+            <table id="lb-table">
+                <thead><tr><th>User</th><th>Score</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <button class="btn" style="margin-top: 1.5rem;" onclick="goHome()">Back to Home</button>
+        </div>
+    </div>
+
+    <script>
+        let mode = 'login';
+        let token = localStorage.getItem('quiz_token');
+        let userId = localStorage.getItem('quiz_user_id');
+        let username = localStorage.getItem('quiz_username');
+        let questions = [];
+        let currentIdx = 0;
+        let selectedAnswers = [];
+
+        // Check login on startup
+        window.onload = () => {
+            if (token) {
+                showScreen('settings-screen');
+                updateUserNav();
+            } else {
+                showScreen('auth-screen');
+            }
+        };
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.card').forEach(el => el.classList.remove('visible-screen'));
+            document.getElementById(screenId).classList.add('visible-screen');
+        }
+
+        function updateUserNav() {
+            const nav = document.getElementById('user-nav');
+            if (token) {
+                nav.classList.add('visible');
+                document.getElementById('user-initial').innerText = username;
+            } else {
+                nav.classList.remove('visible');
+            }
+        }
+
+        function toggleLogoutMenu() {
+            document.getElementById('logout-menu').classList.toggle('show');
+        }
+
+        function logout(e) {
+            if (e) e.stopPropagation();
+            localStorage.clear();
+            token = null;
+            userId = null;
+            username = null;
+            updateUserNav();
+            document.getElementById('logout-menu').classList.remove('show');
+            showScreen('auth-screen');
+        }
+
+        // Close dropdown when clicking outside
+        window.onclick = (event) => {
+            if (!event.target.closest('.user-nav')) {
+                document.getElementById('logout-menu').classList.remove('show');
+            }
+        };
+
+        function goHome() {
+            currentIdx = 0;
+            selectedAnswers = [];
+            if (token) {
+                showScreen('settings-screen');
+            } else {
+                showScreen('auth-screen');
+            }
+        }
+
+        function switchTab(t) {
+            mode = t;
+            document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.innerText.toLowerCase() === t));
+            document.getElementById('auth-btn').innerText = t.charAt(0).toUpperCase() + t.slice(1);
+            document.getElementById('auth-msg').innerText = '';
+        }
+
+        async function handleAuth() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const msg = document.getElementById('auth-msg');
+
+            if (!user || !pass) { msg.className = 'msg error'; msg.innerText = "Fields cannot be empty"; return; }
+
+            try {
+                const endpoint = mode === 'login' ? '/login' : '/register';
+                const resp = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user, password: pass })
+                });
+                const data = await resp.json();
+
+                if (resp.ok) {
+                    if (mode === 'login') {
+                        localStorage.setItem('quiz_token', data.access_token);
+                        localStorage.setItem('quiz_user_id', data.user_id);
+                        localStorage.setItem('quiz_username', user);
+                        token = data.access_token;
+                        userId = data.user_id;
+                        username = user;
+                        updateUserNav();
+                        showScreen('settings-screen');
+                    } else {
+                        msg.className = 'msg success';
+                        msg.innerText = "Registered! Now please login.";
+                        switchTab('login');
+                    }
+                } else {
+                    msg.className = 'msg error';
+                    msg.innerText = data.error || "Something went wrong";
+                }
+            } catch (e) {
+                msg.innerText = "Error: " + e.message;
+            }
+        }
+
+        async function startQuiz() {
+            const limit = document.getElementById('quiz-limit').value;
+            const lang = document.getElementById('quiz-lang').value;
+            showScreen('quiz-container');
+            
+            const resp = await fetch(`/questions?limit=${limit}&lang=${lang}`);
+            questions = await resp.json();
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentIdx >= questions.length) {
+                submitFinal();
+                return;
+            }
+            const q = questions[currentIdx];
+            document.getElementById('q-progress').innerText = `Question ${currentIdx + 1} of ${questions.length}`;
+            document.getElementById('q-text').innerText = q.question;
+            const opts = document.getElementById('q-options');
+            opts.innerHTML = '';
+            q.options.forEach(opt => {
+                const div = document.createElement('div');
+                div.className = 'option';
+                div.innerText = opt.option_text;
+                div.onclick = () => {
+                    document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+                    div.classList.add('selected');
+                    selectedAnswers[currentIdx] = { question_id: q.question_id, option_id: opt.option_id };
+                };
+                opts.appendChild(div);
+            });
+        }
+
+        function nextQuestion() {
+            if (!selectedAnswers[currentIdx]) { alert("Select an answer!"); return; }
+            currentIdx++;
+            showQuestion();
+        }
+
+        async function submitFinal() {
+            await fetch('/submit', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({ answers: selectedAnswers })
+            });
+
+            const scoreResp = await fetch('/score/' + userId);
+            const scoreData = await scoreResp.json();
+            document.getElementById('user-score').innerText = scoreData.score;
+
+            const lbResp = await fetch('/leaderboard');
+            const lbData = await lbResp.json();
+            const lbBody = document.querySelector('#lb-table tbody');
+            lbBody.innerHTML = '';
+            lbData.forEach(entry => {
+                const tr = `<tr><td>${entry.username}</td><td>${entry.score}</td></tr>`;
+                lbBody.innerHTML += tr;
+            });
+
+            showScreen('leaderboard-screen');
+        }
+    </script>
+</body>
+</html>
