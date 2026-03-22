@@ -37,9 +37,9 @@ jobs:
           docker push $IMAGE_REPO:latest
 
       # Refresh the Auto Scaling Group to deploy new image
-      - name: Refresh Auto Scaling Group
-        run: |
-          aws autoscaling start-instance-refresh \
-            --auto-scaling-group-name myasg \
-            --preferences MinHealthyPercentage=50 \
-            --region ap-south-1
+      # - name: Refresh Auto Scaling Group
+      #   run: |
+      #     aws autoscaling start-instance-refresh \
+      #       --auto-scaling-group-name myasg \
+      #       --preferences MinHealthyPercentage=50 \
+      #       --region ap-south-1
