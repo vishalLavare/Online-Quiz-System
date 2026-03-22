@@ -3,13 +3,13 @@
 ## 📸 UI Preview
 
 ### Login Screen
-![Online Quiz System Login](assets/screenshot1.png)
+<img src="assets/img1.png" alt="Login Screen" width="600">
 
 ### Register Screen
-![Online Quiz System Register](assets/screenshot2.png)
+<img src="assets/img2.png" alt="Register Screen" width="600">
 
 ### Quiz Settings Screen
-![Online Quiz System Settings](assets/screenshot3.png)
+<img src="assets/img3.png" alt="Quiz Settings Screen" width="600">
 
 A complete REST API backend for an Online Quiz System built with **Python Flask** and **MySQL**.
 
