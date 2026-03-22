@@ -1,5 +1,9 @@
 # Online Quiz System Backend
 
+![Online Quiz System UI](assets/screenshot1.png)
+![Online Quiz System UI](assets/screenshot2.png)
+![Online Quiz System UI](assets/screenshot3.png)
+
 A complete REST API backend for an Online Quiz System built with **Python Flask** and **MySQL**.
 
 ## 🚀 Features
@@ -97,5 +101,4 @@ A complete REST API backend for an Online Quiz System built with **Python Flask*
 }
 ```
 
----
-Built with ❤️ by Antigravity
+
