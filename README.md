@@ -3,7 +3,7 @@
 ## 📸 UI Preview
 
 ### Login Screen
-![Online Quiz System Login](assets/screenshot1.png)
+
 
 ### Register Screen
 ![Online Quiz System Register](assets/screenshot2.png)
