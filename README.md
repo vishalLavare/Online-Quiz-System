@@ -1,8 +1,15 @@
 # Online Quiz System Backend
 
-![Online Quiz System UI](assets/screenshot1.png)
-![Online Quiz System UI](assets/screenshot2.png)
-![Online Quiz System UI](assets/screenshot3.png)
+## 📸 UI Preview
+
+### Login Screen
+![Online Quiz System Login](assets/screenshot1.png)
+
+### Register Screen
+![Online Quiz System Register](assets/screenshot2.png)
+
+### Quiz Settings Screen
+![Online Quiz System Settings](assets/screenshot3.png)
 
 A complete REST API backend for an Online Quiz System built with **Python Flask** and **MySQL**.
 
