@@ -41,14 +41,36 @@ jobs:
       uses: appleboy/ssh-action@v0.1.6
       env:
         ECR_PASSWORD: ${{ steps.ecr-token.outputs.password }}
+        DB_HOST: "quiz-db"
+        DB_USER: "root"
+        DB_PASSWORD: "rootpassword"
+        DB_NAME: "quiz_db"
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
-        envs: ECR_PASSWORD
+        envs: ECR_PASSWORD,DB_HOST,DB_USER,DB_PASSWORD,DB_NAME
         script: |
+          # Create network
+          docker network inspect quiz-net >/dev/null 2>&1 || docker network create quiz-net
+          
+          # Run MySQL if not running
+          if ! docker ps -a --format '{{.Names}}' | grep -q '^quiz-db$'; then
+            docker run -d --name quiz-db --network quiz-net -e MYSQL_ROOT_PASSWORD=$DB_PASSWORD -e MYSQL_DATABASE=$DB_NAME mysql:8.0
+          fi
+          
+          # Login to ECR
           echo $ECR_PASSWORD | docker login --username AWS --password-stdin 142166253229.dkr.ecr.ap-south-1.amazonaws.com
+          
+          # Pull and run the app
           docker pull 142166253229.dkr.ecr.ap-south-1.amazonaws.com/online-quiz-system:latest
           docker stop online-quiz-system || true
           docker rm online-quiz-system || true
-          docker run -d -p 5000:5000 --name online-quiz-system 142166253229.dkr.ecr.ap-south-1.amazonaws.com/online-quiz-system:latest
+          docker run -d -p 5000:5000 \
+            --name online-quiz-system \
+            --network quiz-net \
+            -e DB_HOST=$DB_HOST \
+            -e DB_USER=$DB_USER \
+            -e DB_PASSWORD=$DB_PASSWORD \
+            -e DB_NAME=$DB_NAME \
+            142166253229.dkr.ecr.ap-south-1.amazonaws.com/online-quiz-system:latest

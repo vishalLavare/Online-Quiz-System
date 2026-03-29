@@ -243,4 +243,4 @@ def get_leaderboard():
 if __name__ == '__main__':
     # Initialize database tables
     init_db()
-    app.run(debug=True, port=5000)
+    app.run(host='0.0.0.0', port=5000)
