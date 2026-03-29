@@ -1,45 +1,45 @@
-name: Deploy to AWS Auto Scaling
+name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+
 jobs:
-  deploy:
+  build-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+    - name: Configure AWS
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+        aws-region: ap-south-1
 
-      # Configure AWS credentials
-      - name: Configure AWS CLI
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.SECRET_KEY }}
-          aws-region: ap-south-1
+    - name: Login to ECR
+      uses: aws-actions/amazon-ecr-login@v1
 
-      # Authenticate Docker to ECR
-      - name: Log in to Amazon ECR
-        run: |
+    - name: Build Docker Image
+      run: docker build -t my-app .
+
+    - name: Tag Image
+      run: docker tag my-app:latest 142166253229.dkr.ecr.ap-south-1.amazonaws.com/my-app:latest
+
+    - name: Push to ECR
+      run: docker push 142166253229.dkr.ecr.ap-south-1.amazonaws.com/my-app:latest
+
+    - name: Deploy on EC2 via SSH
+      uses: appleboy/ssh-action@v0.1.6
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_KEY }}
+        script: |
           aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 142166253229.dkr.ecr.ap-south-1.amazonaws.com
-
-      # Build and push Docker image to ECR
-      - name: Build and push Docker image
-        run: |
-          IMAGE_REPO=142166253229.dkr.ecr.ap-south-1.amazonaws.com/myimg
-          docker build -t myimg .
-          docker tag myimg:latest $IMAGE_REPO:latest
-          docker push $IMAGE_REPO:latest
-
-      # Refresh the Auto Scaling Group to deploy new image
-      # - name: Refresh Auto Scaling Group
-      #   run: |
-      #     aws autoscaling start-instance-refresh \
-      #       --auto-scaling-group-name myasg \
-      #       --preferences MinHealthyPercentage=50 \
-      #       --region ap-south-1
+          docker pull 142166253229.dkr.ecr.ap-south-1.amazonaws.com/my-app:latest
+          docker stop my-container || true
+          docker rm my-container || true
+          docker run -d -p 5000:5000 --name my-container 142166253229.dkr.ecr.ap-south-1.amazonaws.com/my-app:latest
