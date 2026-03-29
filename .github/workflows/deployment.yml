@@ -31,14 +31,23 @@ jobs:
     - name: Push to ECR
       run: docker push 142166253229.dkr.ecr.ap-south-1.amazonaws.com/online-quiz-system:latest
 
+    - name: Get ECR Login Password
+      id: ecr-token
+      run: |
+        password=$(aws ecr get-login-password --region ap-south-1)
+        echo "password=$password" >> $GITHUB_OUTPUT
+
     - name: Deploy on EC2 via SSH
       uses: appleboy/ssh-action@v0.1.6
+      env:
+        ECR_PASSWORD: ${{ steps.ecr-token.outputs.password }}
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
+        envs: ECR_PASSWORD
         script: |
-          aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 142166253229.dkr.ecr.ap-south-1.amazonaws.com
+          echo $ECR_PASSWORD | docker login --username AWS --password-stdin 142166253229.dkr.ecr.ap-south-1.amazonaws.com
           docker pull 142166253229.dkr.ecr.ap-south-1.amazonaws.com/online-quiz-system:latest
           docker stop online-quiz-system || true
           docker rm online-quiz-system || true
