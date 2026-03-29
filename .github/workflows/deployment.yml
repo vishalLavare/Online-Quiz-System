@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "sdk" ]
 
 jobs:
   build-deploy:
@@ -13,10 +13,10 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Configure AWS
-      uses: aws-actions/configure-aws-credentials@v2
+      uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ap-south-1
 
     - name: Login to ECR
@@ -26,20 +26,51 @@ jobs:
       run: docker build -t my-app .
 
     - name: Tag Image
-      run: docker tag my-app:latest 142166253229.dkr.ecr.ap-south-1.amazonaws.com/my-app:latest
+      run: docker tag my-app:latest 142166253229.dkr.ecr.ap-south-1.amazonaws.com/online-quiz-system:latest
 
     - name: Push to ECR
-      run: docker push 142166253229.dkr.ecr.ap-south-1.amazonaws.com/my-app:latest
+      run: docker push 142166253229.dkr.ecr.ap-south-1.amazonaws.com/online-quiz-system:latest
+
+    - name: Get ECR Login Password
+      id: ecr-token
+      run: |
+        password=$(aws ecr get-login-password --region ap-south-1)
+        echo "password=$password" >> $GITHUB_OUTPUT
 
     - name: Deploy on EC2 via SSH
       uses: appleboy/ssh-action@v0.1.6
+      env:
+        ECR_PASSWORD: ${{ steps.ecr-token.outputs.password }}
+        DB_HOST: "quiz-db"
+        DB_USER: "root"
+        DB_PASSWORD: "rootpassword"
+        DB_NAME: "quiz_db"
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
+        envs: ECR_PASSWORD,DB_HOST,DB_USER,DB_PASSWORD,DB_NAME
         script: |
-          aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 142166253229.dkr.ecr.ap-south-1.amazonaws.com
-          docker pull 142166253229.dkr.ecr.ap-south-1.amazonaws.com/my-app:latest
-          docker stop my-container || true
-          docker rm my-container || true
-          docker run -d -p 5000:5000 --name my-container 142166253229.dkr.ecr.ap-south-1.amazonaws.com/my-app:latest
+          # Create network
+          docker network inspect quiz-net >/dev/null 2>&1 || docker network create quiz-net
+          
+          # Run MySQL if not running
+          if ! docker ps -a --format '{{.Names}}' | grep -q '^quiz-db$'; then
+            docker run -d --name quiz-db --network quiz-net -e MYSQL_ROOT_PASSWORD=$DB_PASSWORD -e MYSQL_DATABASE=$DB_NAME mysql:8.0
+          fi
+          
+          # Login to ECR
+          echo $ECR_PASSWORD | docker login --username AWS --password-stdin 142166253229.dkr.ecr.ap-south-1.amazonaws.com
+          
+          # Pull and run the app
+          docker pull 142166253229.dkr.ecr.ap-south-1.amazonaws.com/online-quiz-system:latest
+          docker stop online-quiz-system || true
+          docker rm online-quiz-system || true
+          docker run -d -p 5000:5000 \
+            --name online-quiz-system \
+            --network quiz-net \
+            -e DB_HOST=$DB_HOST \
+            -e DB_USER=$DB_USER \
+            -e DB_PASSWORD=$DB_PASSWORD \
+            -e DB_NAME=$DB_NAME \
+            142166253229.dkr.ecr.ap-south-1.amazonaws.com/online-quiz-system:latest
